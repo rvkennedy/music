@@ -11,3 +11,8 @@
 *.lai
 *.la
 *.a
+GeneratedFiles
+*.user
+Win32
+*.ncb
+*.suo
