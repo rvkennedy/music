@@ -15,8 +15,14 @@
   </property>
   <widget class="QWidget" name="centralWidget">
    <layout class="QGridLayout" name="gridLayout">
+    <property name="margin">
+     <number>0</number>
+    </property>
+    <property name="spacing">
+     <number>0</number>
+    </property>
     <item row="0" column="0">
-     <widget class="QMusicNotationWidget" name="musicNotationWidget"/>
+     <widget class="QMusicNotationWidget" name="musicNotationWidget" native="true"/>
     </item>
    </layout>
   </widget>
@@ -26,15 +32,22 @@
      <x>0</x>
      <y>0</y>
      <width>600</width>
-     <height>21</height>
+     <height>20</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
     <property name="title">
      <string>File</string>
     </property>
+    <widget class="QMenu" name="menuRecentFiles">
+     <property name="title">
+      <string>Recent Files...</string>
+     </property>
+     <addaction name="separator"/>
+    </widget>
     <addaction name="actionOpen"/>
     <addaction name="actionSave"/>
+    <addaction name="menuRecentFiles"/>
    </widget>
    <addaction name="menuFile"/>
   </widget>
@@ -57,13 +70,19 @@
     <string>Save</string>
    </property>
   </action>
+  <action name="actionAbc">
+   <property name="text">
+    <string>abc</string>
+   </property>
+  </action>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
  <customwidgets>
   <customwidget>
    <class>QMusicNotationWidget</class>
    <extends>QWidget</extends>
-   <header>QMusicNotationWidget.h</header>
+   <header>../MusicNotationWidget/QMusicNotationWidget.h</header>
+   <container>1</container>
   </customwidget>
  </customwidgets>
  <resources>

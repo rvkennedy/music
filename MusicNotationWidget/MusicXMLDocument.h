@@ -75,7 +75,8 @@ public:
      void write(QIODevice *device);
 
 // NotationInterface
-	void Fill(int first_bar,int num_bars,NotationSelection *n);
+	void GetStructure(ScoreStructure *s);
+	void Fill(int bar,NotationSelection *n);
 
 	 QMap<QString,musicxml::Part> parts;
 private slots:

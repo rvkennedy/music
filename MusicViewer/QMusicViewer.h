@@ -14,8 +14,16 @@ public:
 public slots:
 	void on_actionOpen_triggered();
 	void on_actionSave_triggered();
+	void openRecentFile();
 private:
 	Ui::QMusicViewerClass ui;
+	int MaxRecentFiles;
+    QVector<QAction*> recentFileActs;
+	void loadFile(QString filename);
+	void updateRecentFileActions();
+	void setCurrentFile(const QString &filename);
+	void loadLastEditedFile();
+	void readRecentFileList();
 };
 
 #endif // QMUSICVIEWER_H

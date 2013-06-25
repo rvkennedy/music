@@ -74,7 +74,7 @@ QString MusicNotationWidgetPlugin::domXml() const
 
 QString MusicNotationWidgetPlugin::includeFile() const
 {
-	return "QMusicNotationWidget.h";
+	return "../MusicNotationWidget/QMusicNotationWidget.h";
 }
 
 Q_EXPORT_PLUGIN2(MusicNotationWidget, MusicNotationWidgetPlugin)

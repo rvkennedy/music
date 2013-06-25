@@ -3,7 +3,9 @@
 
 class NotationInterface
 {
-	virtual void Fill(int first_bar,int num_bars,struct NotationSelection *n)=0;
+public:
+	virtual void GetStructure(struct ScoreStructure *s)=0;
+	virtual void Fill(int bar,struct NotationSelection *n)=0;
 };
 
 #endif
