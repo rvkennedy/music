@@ -53,6 +53,12 @@ public:
 public slots:
 	void StructureChanged();
 protected:
+	void mouseMoveEvent ( QMouseEvent * event );
+	void mousePressEvent ( QMouseEvent * event );
+	void mouseReleaseEvent ( QMouseEvent * event );
+	void mouseDoubleClickEvent( QMouseEvent * event );
+	void wheelEvent ( QWheelEvent * event );
+
     virtual void paintEvent(QPaintEvent *event);
 	//! The left end of the centre line of the staff.
 	struct Staff
@@ -82,6 +88,11 @@ protected:
 	// The list of bars, each of which has its own width.
 	QVector<Bar> bars;
 	float calcBarWidth(int number);
+	QPointF WidgetToSheetPosition(QPointF wpos);
+	QPointF originPos;
+	QPointF last_pos;
+	float xScale,yScale;
 };
+
 
 #endif // QMUSICNOTATIONWIDGET_H

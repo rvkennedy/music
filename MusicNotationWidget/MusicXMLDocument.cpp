@@ -124,15 +124,22 @@ void MusicXMLDocument::Fill(int bar,NotationSelection *n)
 	QDomElement part=root.firstChildElement("part");
 	while(!part.isNull())
 	{
-		QString part_id			=part.attribute("id");
-		QDomElement measure	=part.firstChildElement("measure");
+		QString part_id				=part.attribute("id");
+		QDomElement measure			=part.firstChildElement("measure");
 		while(!measure.isNull())
 		{
-			int b			=measure.attribute("number").toInt()-1;
+			int b					=measure.attribute("number").toInt()-1;
 			if(bar==b)
 			{
-				int divisions	=measure.firstChildElement("attributes").firstChildElement("divisions").text().toInt();
-				int position	=0;
+				int divisions=0;
+				QDomElement attributes	=measure.firstChildElement("attributes");
+				if(!attributes.isNull())
+				{
+					QDomElement d	=attributes.firstChildElement("divisions");
+					if(!d.isNull())
+						divisions	=d.text().toInt();
+				}
+				int position			=0;
 				QDomElement note=measure.firstChildElement("note");
 				while (!note.isNull())
 				{

@@ -1,6 +1,7 @@
 #include "QMusicNotationWidget.h"
 #include <QPainter>
 #include <math.h>
+#include <QMouseEvent>
 
 void NotationSelectionForWidget::clear()
 {
@@ -40,6 +41,9 @@ void ScoreStructureForWidget::setPart(const char *id,const char *n)
 QMusicNotationWidget::QMusicNotationWidget(QWidget *parent)
 	: QWidget(parent)
 	,notationInterface(NULL)
+	,originPos(0.f,0.f)
+	,xScale(8.f)
+	,yScale(8.f)
 {
 }
 
@@ -163,7 +167,7 @@ void QMusicNotationWidget::StructureChanged()
 	ScoreStructureForWidget scoreStructureForWidget;
 	notationInterface->GetStructure(&scoreStructureForWidget);
 	bars.resize(scoreStructureForWidget.numBars);
-	float x=0.f;
+	float x=2.f;
 	for(int i=0;i<scoreStructureForWidget.numBars;i++)
 	{
 		bars[i].x=x;
@@ -179,6 +183,57 @@ void QMusicNotationWidget::StructureChanged()
 		p.index=index++;
 		p.name=i.value();
 	}
+}
+
+static bool ControlPressed(QMouseEvent *e)
+{
+	return e->modifiers()&Qt::ControlModifier;
+}
+
+static bool ShiftPressed(QMouseEvent *e)
+{
+	return e->modifiers()&Qt::ShiftModifier;
+}
+
+QPointF QMusicNotationWidget::WidgetToSheetPosition(QPointF wpos)
+{
+	QPointF spos(wpos.x()/xScale,wpos.y()/yScale);
+	return spos;
+}
+
+void QMusicNotationWidget::mouseMoveEvent(QMouseEvent * e )
+{
+	QPointF pos=WidgetToSheetPosition(e->pos());
+	Qt::MouseButtons b=e->buttons();
+	if(b!=0)
+	{
+		QPointF diff=last_pos-pos;
+		originPos+=diff;
+		if(originPos.x()<0.f)
+			originPos.setX(0.f);
+		if(originPos.y()<0.f)
+			originPos.setY(0.f);
+		update();
+	}
+	last_pos=pos;
+}
+
+void QMusicNotationWidget::mousePressEvent(QMouseEvent * e )
+{
+	QPointF pos=WidgetToSheetPosition(e->pos());
+	last_pos=pos;
+}
+
+void QMusicNotationWidget::mouseReleaseEvent(QMouseEvent * e )
+{
+}
+
+void QMusicNotationWidget::mouseDoubleClickEvent( QMouseEvent * e )
+{
+}
+
+void QMusicNotationWidget::wheelEvent(QWheelEvent * event )
+{
 }
 
 void QMusicNotationWidget::paintEvent(QPaintEvent *event)
@@ -203,7 +258,7 @@ void QMusicNotationWidget::paintEvent(QPaintEvent *event)
 		QString part_id=i.key();
 		const ScorePart &scorePart=i.value();
 		scorePart.index;
-		QRect rect(0,scorePart.index*8*8+4+8,64,16);
+		QRect rect(0,(scorePart.index*8-originPos.y())*yScale+4+8,64,16);
 		painter.drawText(rect,Qt::AlignRight,scorePart.name);
 	}
 
@@ -211,17 +266,31 @@ void QMusicNotationWidget::paintEvent(QPaintEvent *event)
 	painter.setClipRegion(r);
 	painter.setClipping(true);
 
-	painter.scale(8.f,8.f);
-	//painter.translate(0.f,-rect.height());
+	painter.translate(64,0);
+	painter.scale(xScale,yScale);
+
+	painter.translate(-originPos);
 
 	painter.setPen(Qt::black);
-	painter.drawLine(QLineF(0,0,5.f,5.f));
 	QWidget::paintEvent(event);
 
 	if(notationInterface)
 	{
-		int bar0=0;
+		float x0=originPos.x();
+		float width_units=rect.width()/xScale;
+		int bar0=-1;
 		int num_bars=4;
+		for(int i=0;i<bars.size();i++)
+		{
+			Bar &b=bars[i];
+			if(bar0<0&&b.x+b.width>=originPos.x())
+				bar0=i;
+			if(bar0>=0&&b.x>originPos.x()+width_units)
+			{
+				num_bars=i-bar0;
+				break;
+			}
+		}
 		for(int b=bar0;b<=bar0+num_bars;b++)
 		{
 			NotationSelectionForWidget sel;
