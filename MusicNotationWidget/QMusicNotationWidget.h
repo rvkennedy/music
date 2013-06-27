@@ -10,18 +10,7 @@
 struct NotationSelectionForWidget:public NotationSelection
 {
 	void clear();
-	void addNote(const char *part_id,int bar,int position,int duration,int divisions,int octave,int step,float alter);
-	struct Note
-	{
-		int bar;
-		int position;
-		int duration;
-		int divisions;
-		int order;		// 0,1,2,3,...
-		int octave;
-		int step;
-		float alter;
-	};
+	void addNote(const char *part_id,int bar,int clef,int position,int duration,int divisions,int octave,int step,float alter);
 	struct Part
 	{
 		QVector<Note> notes;
@@ -31,10 +20,18 @@ struct NotationSelectionForWidget:public NotationSelection
 
 struct ScoreStructureForWidget:public ScoreStructure
 {
+	struct ScorePart
+	{
+		QString name;
+		//int index;
+		QMap<int,NotationSelection::Clef> clefs;
+		float y;				// vertical position, affected by what's above it.
+	};
 	void clear();
 	void setNumBars(int b);
 	void setPart(const char *id,const char *n);
-	QMap<QString,QString> parts;
+	void setClef(const char *id,int bar,int clef_number,const char *sign,int clef_line);
+	QMap<QString,ScorePart> parts;
 	int numBars;
 };
 class QDESIGNER_WIDGET_EXPORT QMusicNotationWidget : public QWidget
@@ -68,26 +65,23 @@ protected:
 		float width;
 		float note_width;
 	};
-	struct ScorePart
-	{
-		QString name;
-		int index;
-	};
 	struct Bar
 	{
-		float x;		// The horizontal position, accumulated from the widths of the previous bars.
-		float width;	// The width, calculated from the contents of this bar across all the parts.
+		float x;				// The horizontal position, accumulated from the widths of the previous bars.
+		float width;			// The width, calculated from the contents of this bar across all the parts.
+		QMap<int,int> order;	// A map from note position to order.
+								// Each unique note position has an order value, 0,1,2,...
 	};
 
-	Staff getStaff(const QString &part_id,int bar);
+	Staff getStaff(const ScoreStructureForWidget::ScorePart &part,int bar,int clef);
 	void drawStaff(class QPainter &painter,const Staff &staff);
 	void drawNote(class QPainter &painter,const QString &part_id,const NotationSelectionForWidget::Note &n);
 	// This is where the widget gets its notes from.
 	NotationInterface *notationInterface;
-	QMap<QString,ScorePart> parts;
+	QMap<QString,ScoreStructureForWidget::ScorePart> parts;
 	// The list of bars, each of which has its own width.
 	QVector<Bar> bars;
-	float calcBarWidth(int number);
+	void calcBarWidth(int number);
 	QPointF WidgetToSheetPosition(QPointF wpos);
 	QPointF originPos;
 	QPointF last_pos;

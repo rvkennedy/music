@@ -8,16 +8,16 @@ void NotationSelectionForWidget::clear()
 	parts.clear();
 }
 
-void NotationSelectionForWidget::addNote(const char *part_id,int bar,int position,int duration,int divisions,int octave,int step,float alter)
+void NotationSelectionForWidget::addNote(const char *part_id,int bar,int clef,int position,int duration,int divisions,int octave,int step,float alter)
 {
 	Part &p=parts[QString(part_id)];
 	Note n;
 	n.bar		=bar;
+	n.clef		=clef;
 	n.position	=position;
 	n.duration	=duration;
 	n.divisions	=divisions;
 	n.octave	=octave;
-	n.order		=p.notes.size();
 	n.step		=step;
 	n.alter		=alter;
 	p.notes.append(n);
@@ -35,7 +35,46 @@ void ScoreStructureForWidget::setNumBars(int b)
 }
 void ScoreStructureForWidget::setPart(const char *id,const char *n)
 {
-	parts[id]=n;
+	parts[id].name=n;
+	parts[id].y=0.f;
+}
+
+void ScoreStructureForWidget::setClef(const char *part_id,int bar,int clef_number,const char *sign,int clef_line)
+{
+	NotationSelection::Clef &clef		=parts[part_id].clefs[clef_number];
+	clef.bar		=bar;
+	clef.sign		=sign[0];			// 'G'=treble, 'F'=bass, 'C'=C clef
+	clef.clef_line	=clef_line;
+	int clef_note=0;
+	int clef_note_octave=0;
+	if(clef.sign			=='G')
+	{
+		clef_note_octave	=4;
+		clef_note			=4;//'G'
+	}
+	else if(clef.sign		=='F')
+	{
+		clef_note_octave	=3;
+		clef_note			=3;//'F'
+	}
+	else if(clef.sign		=='C')
+	{
+		clef_note_octave	=4;
+		clef_note			=0;//'C'
+	}
+	// But what if the clef line is not the expected one?
+	clef.centre_note		=clef_note+2*(3-clef_line);
+	clef.centre_octave	=clef_note_octave;
+	while(clef.centre_note<0)
+	{
+		clef.centre_note+=7;
+		clef.centre_octave--;
+	}
+	while(clef.centre_note>6)
+	{
+		clef.centre_note-=7;
+		clef.centre_octave++;
+	}
 }
 
 QMusicNotationWidget::QMusicNotationWidget(QWidget *parent)
@@ -51,12 +90,12 @@ QMusicNotationWidget::~QMusicNotationWidget()
 {
 }
 
-QMusicNotationWidget::Staff QMusicNotationWidget::getStaff(const QString &part_id,int bar)
+QMusicNotationWidget::Staff QMusicNotationWidget::getStaff(const ScoreStructureForWidget::ScorePart &part,int bar,int clef)
 {
-	int index=parts[part_id].index;
+	//int index=part.index;
 	Staff staff;
 	staff.note_width=4.f;
-	staff.origin=QPointF(bars[bar].x,index*8.f+4.f);
+	staff.origin=QPointF(bars[bar].x,part.y+clef*8.f+4.f);
 	staff.width=bars[bar].width;
 	staff.dy=1.f;
 	return staff;
@@ -90,20 +129,22 @@ static float sind(float r)
 
 void QMusicNotationWidget::drawNote(QPainter &painter,const QString &part_id,const NotationSelectionForWidget::Note &n)
 {
-	Staff staff=getStaff(part_id,n.bar);
-	
-	float y_offset_from_centre=-n.step*0.5f+3.f;
+	const ScoreStructureForWidget::ScorePart &part=parts[part_id];
+	Staff staff=getStaff(part,n.bar,n.clef);
+	NotationSelection::Clef clef=part.clefs[n.clef];
+	// The staff has an origin at the left of its centre line.
+	// The clef defines both a symbol ('G', 'F', etc, and a line number).
+	int offset_from_centre=n.step-clef.centre_note+7*(n.octave-clef.centre_octave);
 
-	QPointF note_centre=staff.origin+QPointF(((float)n.order+1.f)*staff.note_width,(y_offset_from_centre)*staff.dy);
-
+	float y_offset_from_centre=-offset_from_centre*0.5f;
+	int order=bars[n.bar].order[n.position];
+	QPointF note_centre=staff.origin+QPointF(((float)order+1.f)*staff.note_width,(y_offset_from_centre)*staff.dy);
 	static float rotation=-30.f;
-
 	float height=staff.dy/2.f;
 	float width=height*1.4f;
 	QTransform t=painter.worldTransform();
 	painter.translate(note_centre);
 	painter.rotate(rotation);
-
 	//
 	bool solid=(n.duration<n.divisions*2);
 	if(solid)
@@ -116,10 +157,8 @@ void QMusicNotationWidget::drawNote(QPainter &painter,const QString &part_id,con
 		painter.setBrush(Qt::NoBrush);
 		painter.setPen(Qt::black);
 	}
-
 	painter.drawEllipse(QPointF(0,0),width,height);
 	painter.setWorldTransform(t);
-
 	// Now draw the stem.
 	if(n.duration<n.divisions*4)
 	{
@@ -141,12 +180,14 @@ void QMusicNotationWidget::drawNote(QPainter &painter,const QString &part_id,con
 	}
 }
 
-float QMusicNotationWidget::calcBarWidth(int bar)
+void QMusicNotationWidget::calcBarWidth(int b)
 {
 	NotationSelectionForWidget sel;
-	notationInterface->Fill(bar,&sel);
+	Bar &bar=bars[b];
+	notationInterface->Fill(b,&sel);
 
 	QMapIterator<QString,NotationSelectionForWidget::Part> i(sel.parts);
+	QSet<int> positions;
 	float width=0.f;
 	while(i.hasNext())
 	{
@@ -155,11 +196,16 @@ float QMusicNotationWidget::calcBarWidth(int bar)
 		const NotationSelectionForWidget::Part &p=i.value();
 		for(int j=0;j<p.notes.size();j++)
 		{
-			if(p.notes[j].order>width)
-				width=p.notes[j].order;
+			positions.insert(p.notes[j].position);
 		}
 	}
-	return width*4.f;
+	QList<int> pos_list=positions.toList();
+	qSort(pos_list);
+	for(int j=0;j<pos_list.size();j++)
+	{
+		bar.order[pos_list[j]]=j;
+	}
+	bar.width=(bar.order.size()+2.f)*4.f;
 }
 
 void QMusicNotationWidget::StructureChanged()
@@ -171,17 +217,21 @@ void QMusicNotationWidget::StructureChanged()
 	for(int i=0;i<scoreStructureForWidget.numBars;i++)
 	{
 		bars[i].x=x;
-		bars[i].width=calcBarWidth(i);
+		calcBarWidth(i);
 		x+=bars[i].width;
 	}
-	QMapIterator <QString,QString> i(scoreStructureForWidget.parts);
+	parts=scoreStructureForWidget.parts;
+	QMapIterator <QString,ScoreStructureForWidget::ScorePart> i(scoreStructureForWidget.parts);
 	int index=0;
+	float y=0.f;
 	while(i.hasNext())
 	{
 		i.next();
-		ScorePart &p=parts[i.key()];
-		p.index=index++;
-		p.name=i.value();
+		ScoreStructureForWidget::ScorePart p=i.value();
+		p.y=y;
+		parts[i.key()]=p;
+		float height=8.f*p.clefs.size();
+		y+=height;
 	}
 }
 
@@ -251,14 +301,13 @@ void QMusicNotationWidget::paintEvent(QPaintEvent *event)
 
 	painter.setBrush(Qt::NoBrush);
 	painter.setPen(Qt::black);
-	QMapIterator<QString,ScorePart> i(parts);
+	QMapIterator<QString,ScoreStructureForWidget::ScorePart> i(parts);
 	while(i.hasNext())
 	{
 		i.next();
 		QString part_id=i.key();
-		const ScorePart &scorePart=i.value();
-		scorePart.index;
-		QRect rect(0,(scorePart.index*8-originPos.y())*yScale+4+8,64,16);
+		const ScoreStructureForWidget::ScorePart &scorePart=i.value();
+		QRect rect(0,(scorePart.y-originPos.y())*yScale+4+8,64,16);
 		painter.drawText(rect,Qt::AlignRight,scorePart.name);
 	}
 
@@ -301,8 +350,13 @@ void QMusicNotationWidget::paintEvent(QPaintEvent *event)
 				i.next();
 				QString part_id=i.key();
 				const NotationSelectionForWidget::Part &p=i.value();
-				Staff staff=getStaff(part_id,b);
-				drawStaff(painter,staff);
+				QMapIterator<int,NotationSelection::Clef> j(parts[part_id].clefs);
+				while(j.hasNext())
+				{
+					j.next();
+					const Staff &staff=getStaff(parts[part_id],b,j.key());
+					drawStaff(painter,staff);
+				}
 				for(int i=0;i<p.notes.size();i++)
 				{
 					const NotationSelectionForWidget::Note &n=p.notes[i];
