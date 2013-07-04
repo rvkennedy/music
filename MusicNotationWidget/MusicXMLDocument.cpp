@@ -112,14 +112,29 @@ void MusicXMLDocument::GetStructure(ScoreStructure *s)
 			if(!attributes.isNull())
 			{
 				QDomElement clef		=attributes.firstChildElement("clef");
-				while (!clef.isNull())
+				while(!clef.isNull())
 				{
 					int clef_number		=clef.attribute("number").toInt();
 					QString clef_sign	=clef.firstChildElement("sign").text();
 					int clef_line		=clef.firstChildElement("line").text().toInt();
-					//n->addClef(b,clef_number,clef_sign.toAscii(),clef_line);
 					s->setClef(part_id.toAscii(),b,clef_number,clef_sign.toAscii(),clef_line);
-					clef				=attributes.nextSiblingElement("clef");
+					clef				=clef.nextSiblingElement("clef");
+				}
+				QDomElement key			=attributes.firstChildElement("key");
+				while(!key.isNull())
+				{
+					int fifths			=key.firstChildElement("fifths").text().toInt();
+					QString mode		=key.firstChildElement("mode").text();
+					s->setKeySignature(part_id.toAscii(),b,fifths,mode.toAscii());
+					key					=key.nextSiblingElement("key");
+				}
+				QDomElement time		=attributes.firstChildElement("time");
+				while(!time.isNull())
+				{
+					int beats			=time.firstChildElement("beats").text().toInt();
+					int beat_type		=time.firstChildElement("beat-type").text().toInt();
+					s->setTimeSignature(part_id.toAscii(),b,beats,beat_type);
+					time				=time.nextSiblingElement("time");
 				}
 			}
 			
@@ -158,7 +173,6 @@ void MusicXMLDocument::Fill(int bar,NotationSelection *n)
 					int clef_number		=clef.attribute("number").toInt();
 					QString clef_sign	=clef.firstChildElement("sign").text();
 					int clef_line		=clef.firstChildElement("line").text().toInt();
-					//n->addClef(b,clef_number,clef_sign.toAscii(),clef_line);
 					clef				=attributes.nextSiblingElement("clef");
 				}
 			}

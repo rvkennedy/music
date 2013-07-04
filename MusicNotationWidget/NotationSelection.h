@@ -7,30 +7,12 @@ struct ScoreStructure
 	virtual void setNumBars(int b)=0;
 	virtual void setPart(const char *part_id,const char *name)=0;
 	virtual void setClef(const char *part_id,int bar,int clef_number,const char *sign,int clef_line)=0;
+	virtual void setKeySignature(const char *part_id,int bar,int fifths,const char *mode)=0;
+	virtual void setTimeSignature(const char *part_id,int bar,int beats,int beat_type)=0;
 };
 
 struct NotationSelection
 {
-	struct Clef
-	{
-		int bar;
-		char sign;			// 'G'=treble, 'F'=bass, 'C'=C clef
-		int clef_line;		// Which line goes through the clef's "centre"
-		int centre_octave;	// Where 4 is the octave starting on middle 'C'
-		int centre_note;	// Measured in semitones, where C is 0
-	};
-	struct Note
-	{
-		int bar;
-		int clef;
-		int position;
-		int duration;
-		int divisions;
-		//int order;		// 0,1,2,3,...
-		int octave;
-		int step;
-		float alter;
-	};
 	virtual void clear()=0;
 	// Add a note to the selection, at the given octave where 4 indicates the octave started by middle C
 	// and step(0 to 7), with C=0, plus an alteration in semitones (-1 = flat, 1=sharp)
